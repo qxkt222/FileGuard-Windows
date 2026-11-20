@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-test:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # FileGuard.WinFsp.csproj 直接引用 WinFsp 安装目录里的 winfsp-msil.dll，
+      # 干净 runner 上没有这个文件，构建会失败。版本固定成本地验证过的 2.1，
+      # 避免上游新版改了路径或 API 之后 CI 无缘无故变红。
+      - name: Install WinFsp
+        shell: pwsh
+        run: |
+          $url = "https://github.com/winfsp/winfsp/releases/download/v2.1/winfsp-2.1.25156.msi"
+          $msi = Join-Path $env:RUNNER_TEMP "winfsp.msi"
+          Invoke-WebRequest -Uri $url -OutFile $msi
+          Start-Process msiexec.exe -ArgumentList "/i", "`"$msi`"", "/qn", "/norestart" -Wait
+          Get-Service WinFsp.Launcher | Format-Table -AutoSize
+          $dll = "C:\Program Files (x86)\WinFsp\bin\winfsp-msil.dll"
+          if (-not (Test-Path $dll)) { throw "WinFsp 安装失败：$dll 不存在" }
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore FileGuard.sln
+
+      - name: Build
+        run: dotnet build FileGuard.sln -c Release --no-restore
+
+      - name: Test
+        shell: pwsh
+        run: >
+          dotnet test FileGuard.sln -c Release --no-build
+          --logger "trx;LogFileName=results.trx"
+          --results-directory "$env:RUNNER_TEMP\TestResults"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: ${{ runner.temp }}\TestResults
+          if-no-files-found: ignore
