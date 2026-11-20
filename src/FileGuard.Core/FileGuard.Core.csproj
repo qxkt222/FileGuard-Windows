@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>FileGuard.Core</RootNamespace>
+    <AssemblyName>FileGuard.Core</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 虚拟盘条目的生命周期（挂载/卸载/恢复）放在 Core，方便集成测试。 -->
+    <ProjectReference Include="..\FileGuard.WinFsp\FileGuard.WinFsp.csproj" />
+  </ItemGroup>
+</Project>

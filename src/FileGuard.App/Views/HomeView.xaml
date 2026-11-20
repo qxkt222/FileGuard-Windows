@@ -1,0 +1,26 @@
+<UserControl x:Class="FileGuard.App.Views.HomeView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Margin="28">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0">
+            <TextBlock x:Name="Title" FontSize="22" FontWeight="Bold" Text="监视条目"/>
+            <TextBlock x:Name="Subtitle" Foreground="#6B7280" Margin="0,6,0,0"/>
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" Margin="0,18,0,0" VerticalScrollBarVisibility="Auto">
+            <StackPanel x:Name="EntryHost"/>
+        </ScrollViewer>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,16,0,0">
+            <Button Style="{StaticResource PrimaryButton}" Content="建立监视条目" Click="OnCreate"/>
+            <Button Content="最近拦截" Click="OnRecent"/>
+            <Button Content="打开隔离区" Click="OnQuarantine"/>
+        </StackPanel>
+    </Grid>
+</UserControl>

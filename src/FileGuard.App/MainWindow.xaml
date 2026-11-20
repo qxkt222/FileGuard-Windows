@@ -1,0 +1,30 @@
+﻿<Window x:Class="FileGuard.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="文件卫士" Height="640" Width="980"
+        WindowStartupLocation="CenterScreen"
+        Icon="/Resources/app.ico"
+        Background="#F6F7F9"
+        MinWidth="760" MinHeight="520">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Border Background="#111827" Padding="24,14">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock x:Name="StatusText" Foreground="#9CA3AF" VerticalAlignment="Center"
+                               Margin="0,0,16,0" FontSize="12"/>
+                    <Button Content="暂停 / 恢复" Click="OnPauseClick"/>
+                    <Button Content="设置" Click="OnSettingsClick"/>
+                </StackPanel>
+                <TextBlock Text="文件卫士" Foreground="White" FontSize="18" FontWeight="Bold"
+                           VerticalAlignment="Center"/>
+            </DockPanel>
+        </Border>
+
+        <ContentControl x:Name="PageHost" Grid.Row="1"/>
+    </Grid>
+</Window>

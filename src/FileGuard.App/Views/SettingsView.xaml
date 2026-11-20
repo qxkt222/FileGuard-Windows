@@ -1,0 +1,90 @@
+<UserControl x:Class="FileGuard.App.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Margin="28">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0">
+            <TextBlock Text="设置" FontSize="20" FontWeight="Bold"/>
+            <TextBlock Text="改完点保存。恢复默认只重置设置，条目不动。"
+                       Foreground="#6B7280" Margin="0,6,0,0"/>
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" Margin="0,18,0,0" VerticalScrollBarVisibility="Auto">
+            <Border Background="White" CornerRadius="8" BorderBrush="#E5E7EB"
+                    BorderThickness="1" Padding="22">
+                <StackPanel>
+                    <TextBlock Text="新建条目默认值" FontWeight="SemiBold" Margin="0,0,0,10"/>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                        <TextBlock Text="默认单文件上限" VerticalAlignment="Center"/>
+                        <TextBox x:Name="DefaultKbBox" Width="90" Margin="12,0,8,0" Padding="6"
+                                 VerticalContentAlignment="Center"/>
+                        <TextBlock Text="KB" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <CheckBox x:Name="DefaultWriteBox" Content="默认监视「写入 / 修改」"
+                              Margin="0,0,0,8"/>
+                    <CheckBox x:Name="DefaultExistingBox" Content="默认检查已存在的文件"
+                              Margin="0,0,0,12"/>
+
+                    <TextBlock Text="新建条目的默认拦截模式" Margin="0,0,0,8"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,22">
+                        <RadioButton x:Name="DefaultModeWatchRadio" GroupName="DefaultMode"
+                                     Content="监视模式（写入后删除）" Margin="0,0,20,0"/>
+                        <RadioButton x:Name="DefaultModeDiskRadio" GroupName="DefaultMode"
+                                     Content="虚拟盘模式（写入当场失败）"/>
+                    </StackPanel>
+
+                    <TextBlock Text="启动与权限" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                    <CheckBox x:Name="AutoStartBox" Content="开机自启" Margin="0,0,0,8"/>
+                    <CheckBox x:Name="StartMinBox" Content="启动后最小化到托盘" Margin="0,0,0,8"/>
+                    <CheckBox x:Name="NonAdminBox" Margin="0,0,0,22">
+                        <TextBlock Text="非管理员不能退出或暂停保护（需要管理员权限才能真正拦住）"
+                                   TextWrapping="Wrap"/>
+                    </CheckBox>
+
+                    <TextBlock Text="隔离区" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                    <CheckBox x:Name="QuarantineBox" Content="删除前备份到隔离区"
+                              Margin="0,0,0,10"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,22">
+                        <TextBlock Text="保留最近" VerticalAlignment="Center"/>
+                        <TextBox x:Name="QuarantineKeepBox" Width="70" Margin="12,0,8,0" Padding="6"
+                                 VerticalContentAlignment="Center"/>
+                        <TextBlock Text="次" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <TextBlock Text="其他" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                    <CheckBox x:Name="RuleFileBox" Content="建条目时在监视目录写规则说明（.guard-rules.md）"
+                              Margin="0,0,0,16"/>
+
+                    <TextBlock Text="进程守护" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                    <TextBlock x:Name="GuardStatusText" Text="守护服务：状态未知" Margin="0,0,0,4"/>
+                    <TextBlock Text="安装后，非管理员无法结束本程序；退出需要管理员批准。"
+                               Foreground="#6B7280" FontSize="12" TextWrapping="Wrap"
+                               Margin="0,0,0,12"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,22">
+                        <Button x:Name="InstallServiceButton" Content="安装守护服务"
+                                Click="OnInstallService"/>
+                        <Button x:Name="UninstallServiceButton" Content="卸载守护服务"
+                                Click="OnUninstallService" Style="{StaticResource DangerButton}"/>
+                        <Button Content="刷新状态" Click="OnRefreshServiceStatus"/>
+                    </StackPanel>
+
+                    <TextBlock x:Name="DataPathText" Foreground="#6B7280" FontSize="12"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+        </ScrollViewer>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
+            <Button Content="恢复默认" Click="OnReset" Style="{StaticResource DangerButton}"/>
+            <Button Content="取消" Click="OnCancel"/>
+            <Button Style="{StaticResource PrimaryButton}" Content="保存" Click="OnSave"/>
+        </StackPanel>
+    </Grid>
+</UserControl>

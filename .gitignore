@@ -1,0 +1,7 @@
+bin/
+obj/
+publish/
+_poc/
+poc/
+*.user
+.vs/

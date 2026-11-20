@@ -1,0 +1,126 @@
+<UserControl x:Class="FileGuard.App.Views.EntryFlowView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Margin="28">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0">
+            <TextBlock x:Name="StepTitle" FontSize="20" FontWeight="Bold"/>
+            <TextBlock x:Name="StepHint" Foreground="#6B7280" Margin="0,6,0,0"/>
+        </StackPanel>
+
+        <!-- 第一步：选择监视文件夹 -->
+        <Border x:Name="Step1Panel" Grid.Row="1" Background="White" CornerRadius="8"
+                BorderBrush="#E5E7EB" BorderThickness="1" Padding="20" Margin="0,18,0,0">
+            <StackPanel>
+                <TextBlock Text="监视文件夹" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="PathBox" IsReadOnly="True" Padding="8"
+                             VerticalContentAlignment="Center" MinHeight="36"/>
+                    <Button Grid.Column="1" Content="浏览…" Click="OnBrowse" Margin="8,0,0,0"/>
+                </Grid>
+                <TextBlock x:Name="PathHint" Foreground="#6B7280" Margin="0,10,0,0"
+                           TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
+
+        <!-- 第二步：豁免文件夹 -->
+        <Border x:Name="Step2Panel" Grid.Row="1" Background="White" CornerRadius="8"
+                BorderBrush="#E5E7EB" BorderThickness="1" Padding="20" Margin="0,18,0,0"
+                Visibility="Collapsed">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <DockPanel Grid.Row="0" Margin="0,0,0,10">
+                    <CheckBox x:Name="ExpandAllBox" Content="展开全部层级" DockPanel.Dock="Right"
+                              Checked="OnExpandToggle" Unchecked="OnExpandToggle"/>
+                    <TextBlock Text="勾选要豁免的文件夹（被豁免的目录完全不监视）"/>
+                </DockPanel>
+
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+                              MaxHeight="380">
+                    <StackPanel x:Name="ExemptHost"/>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <!-- 第三步：监视设置 -->
+        <Border x:Name="Step3Panel" Grid.Row="1" Background="White" CornerRadius="8"
+                BorderBrush="#E5E7EB" BorderThickness="1" Padding="20" Margin="0,18,0,0"
+                Visibility="Collapsed">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <TextBlock Text="监视设置" FontWeight="SemiBold" FontSize="15" Margin="0,0,0,14"/>
+
+                    <TextBlock Text="拦截模式" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                    <StackPanel Margin="0,0,0,16">
+                        <RadioButton x:Name="WatchModeRadio" GroupName="GuardMode"
+                                     Content="监视模式（写入完成后删除）"
+                                     Margin="0,0,0,6" Checked="OnModeChanged"/>
+                        <RadioButton x:Name="DiskModeRadio" GroupName="GuardMode"
+                                     Content="虚拟盘模式（写入当场失败）"
+                                     Checked="OnModeChanged"/>
+                        <TextBlock x:Name="ModeHint" Foreground="#6B7280" FontSize="12"
+                                   TextWrapping="Wrap" Margin="20,6,0,0"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                        <TextBlock Text="单文件上限" VerticalAlignment="Center"/>
+                        <TextBox x:Name="MaxKbBox" Width="90" Margin="12,0,8,0" Padding="6"
+                                 VerticalContentAlignment="Center"/>
+                        <TextBlock Text="KB" VerticalAlignment="Center"/>
+                        <TextBlock Text="（不填默认 20 KB）" Foreground="#6B7280"
+                                   VerticalAlignment="Center" Margin="8,0,0,0" FontSize="12"/>
+                    </StackPanel>
+
+                    <StackPanel x:Name="WatchOptionsPanel">
+                        <CheckBox x:Name="LimitBox" Content="限制：超过上限的文件直接删除"
+                                  FontWeight="SemiBold" Margin="0,0,0,14"/>
+
+                        <TextBlock Text="监视对象" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                        <StackPanel Margin="0,0,0,16">
+                            <CheckBox x:Name="WriteBox" Content="写入 / 修改（默认）" Margin="0,0,0,6"/>
+                            <CheckBox x:Name="CreateBox" Content="新建文件" Margin="0,0,0,6"/>
+                            <CheckBox x:Name="DeleteBox" Content="删除文件" Margin="0,0,0,6"/>
+                            <CheckBox x:Name="RenameBox" Content="重命名 / 移动" Margin="0,0,0,6"/>
+                        </StackPanel>
+
+                        <CheckBox x:Name="ExistingBox" Content="已存在的文件也检查（默认只拦新建文件）"
+                                  Margin="0,0,0,8"/>
+                        <CheckBox x:Name="RuleFileBox" Content="在监视目录写一份规则说明（.guard-rules.md）"
+                                  Margin="0,0,0,0"/>
+                    </StackPanel>
+
+                    <Border x:Name="DiskOptionsPanel" Visibility="Collapsed" Background="#F9FAFB"
+                            BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="6" Padding="14">
+                        <StackPanel>
+                            <TextBlock Text="虚拟盘模式说明" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                            <TextBlock TextWrapping="Wrap" Foreground="#4B5563" FontSize="12">
+                                整个目录会被虚拟盘接管：写入超过上限时当场返回「磁盘已满」，文件不会落盘，
+                                不需要事后删除。没有豁免目录，也不区分监视事件。
+                                建好或切换模式时目录会重建（原目录改名为 xxx.__guard_store 再挂回来），
+                                修改上限同样会重建。停用条目或退出程序时目录自动恢复。
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
+            <Button x:Name="BackBtn" Content="取消" Click="OnBack"/>
+            <Button x:Name="PrimaryBtn" Style="{StaticResource PrimaryButton}" Click="OnPrimary"/>
+        </StackPanel>
+    </Grid>
+</UserControl>
