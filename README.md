@@ -25,6 +25,7 @@
 
 ## 跑起来
 
+- 安装包：`dist\FileGuard-0.1.0-setup.exe`（自带 .NET 运行时，捆绑 WinFsp；装到 Program Files）
 - 已发布的程序：`publish\FileGuard.exe`（依赖本机 .NET 8 Desktop Runtime）
 - 守护服务（可选）：`publish\service\FileGuard.Service.exe`
 - 桌面快捷方式：`文件卫士.lnk`
@@ -55,7 +56,23 @@ src/FileGuard.App/      WPF 界面 + 托盘
 tests/FileGuard.Core.Tests/      监视引擎 + 虚拟盘集成测试
 tests/FileGuard.WinFsp.Tests/    虚拟盘模块自身测试
 tests/FileGuard.Service.Tests/   守护决策、管道协议、真实身份检查
+installer/              Inno Setup 安装包脚本与构建脚本
 ```
+
+## 安装包
+
+```powershell
+# 需要 Inno Setup 6；WinFsp 的 msi 会自动下载到 installer\redist\
+powershell -ExecutionPolicy Bypass -File installer\build.ps1
+```
+
+产出 `dist\FileGuard-<版本>-setup.exe`，单文件自带 .NET 运行时，安装时按需静默安装 WinFsp。
+
+- 装到 `C:\Program Files\FileGuard`，需要管理员权限
+- 「进程守护服务」是安装向导里的复选框，**默认不勾**
+- WinFsp 只在检测不到时安装，已装过的机器不会重装
+- 卸载时按「停服务 → 结束程序 → 卸服务」的顺序清场；配置和隔离区会询问是否保留
+- 捆绑分发的 WinFsp 是 GPLv2，安装目录里带 `WinFsp-LICENSE.txt`
 
 ## 进程守护服务
 

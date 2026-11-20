@@ -3,5 +3,8 @@ obj/
 publish/
 _poc/
 poc/
+dist/
+# GPL 二进制不进仓库，由 build.ps1 按需下载
+installer/redist/*.msi
 *.user
 .vs/
