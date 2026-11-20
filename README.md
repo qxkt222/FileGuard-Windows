@@ -1,5 +1,7 @@
 # 文件卫士 FileGuard
 
+[![CI](https://github.com/qxkt222/FileGuard-Windows/actions/workflows/ci.yml/badge.svg)](https://github.com/qxkt222/FileGuard-Windows/actions/workflows/ci.yml)
+
 监视文件夹里被写入的文件，超过上限直接删除，用来硬性约束 AI 别把代码塞进一个巨型文件。
 
 ## 现在能做什么

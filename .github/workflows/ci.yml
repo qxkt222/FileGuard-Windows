@@ -11,7 +11,7 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # FileGuard.WinFsp.csproj 直接引用 WinFsp 安装目录里的 winfsp-msil.dll，
       # 干净 runner 上没有这个文件，构建会失败。版本固定成本地验证过的 2.1，
@@ -27,7 +27,7 @@ jobs:
           $dll = "C:\Program Files (x86)\WinFsp\bin\winfsp-msil.dll"
           if (-not (Test-Path $dll)) { throw "WinFsp 安装失败：$dll 不存在" }
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '8.0.x'
 
@@ -46,7 +46,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-results
           path: ${{ runner.temp }}\TestResults
