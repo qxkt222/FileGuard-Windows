@@ -6,7 +6,7 @@
 ; 用 installer\build.ps1 一键完成。
 
 #ifndef MyAppVersion
-  #define MyAppVersion "0.1.0"
+  #define MyAppVersion "0.1.1"
 #endif
 
 #define MyAppName "文件卫士"
@@ -55,6 +55,8 @@ Name: "installservice"; Description: "安装进程守护服务（SYSTEM 权限�
 
 [Files]
 Source: "..\publish\app-full\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+; 这个不能被 pack 进单文件 exe：WinFsp 靠它自身的磁盘路径找原生 winfsp-x64.dll
+Source: "..\publish\app-full\winfsp-msil.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\publish\service-full\{#MyServiceExeName}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\LICENSE"; DestDir: "{app}"; DestName: "LICENSE.txt"; Flags: ignoreversion
 Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion

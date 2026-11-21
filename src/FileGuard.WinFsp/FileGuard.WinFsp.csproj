@@ -11,6 +11,9 @@
     <Reference Include="winfsp-msil">
       <HintPath>C:\Program Files (x86)\WinFsp\bin\winfsp-msil.dll</HintPath>
       <Private>true</Private>
+      <!-- 不能打进单文件 bundle：Fsp.Interop.Api 的静态构造靠 Assembly.Location
+           找原生 winfsp-x64.dll，bundle 里 Location 是空串会抛 ArgumentException。 -->
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
     </Reference>
   </ItemGroup>
 

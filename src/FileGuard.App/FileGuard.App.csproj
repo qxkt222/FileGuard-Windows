@@ -33,4 +33,28 @@
     <Resource Include="Resources\tray-off.ico" />
   </ItemGroup>
 
+  <!-- WinFsp 的 winfsp-msil.dll 是混合模式程序集，Fsp.Interop.Api 的静态构造
+       靠 Assembly.Location 定位原生 winfsp-x64.dll。打进单文件 bundle 后
+       Location 是空串，挂载会抛 TypeInitializationException。
+       元数据加在 FileGuard.WinFsp 的 Reference 上不会传递过来，所以在发布环节改：
+       一是强制它作为独立文件复制，二是把它踢出 bundle。 -->
+  <ItemGroup>
+    <None Include="C:\Program Files (x86)\WinFsp\bin\winfsp-msil.dll"
+          Link="winfsp-msil.dll"
+          Visible="false"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="PreserveNewest"
+          ExcludeFromSingleFile="true" />
+  </ItemGroup>
+
+  <Target Name="KeepWinFspMsilOutOfSingleFileBundle"
+          BeforeTargets="_ComputeFilesToBundle;GenerateSingleFileBundle">
+    <ItemGroup>
+      <ResolvedFileToPublish Update="@(ResolvedFileToPublish)"
+                             Condition="'%(Filename)' == 'winfsp-msil'">
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
+
 </Project>
