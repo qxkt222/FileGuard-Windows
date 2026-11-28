@@ -6,7 +6,7 @@
 ; 用 installer\build.ps1 一键完成。
 
 #ifndef MyAppVersion
-  #define MyAppVersion "0.1.1"
+  #define MyAppVersion "0.1.2"
 #endif
 
 #define MyAppName "文件卫士"

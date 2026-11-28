@@ -25,7 +25,7 @@
 
 ## 跑起来
 
-- 安装包：`dist\FileGuard-0.1.1-setup.exe`（自带 .NET 运行时，捆绑 WinFsp；装到 Program Files）
+- 安装包：`dist\FileGuard-0.1.2-setup.exe`（自带 .NET 运行时，捆绑 WinFsp；装到 Program Files）
 - 已发布的程序：`publish\FileGuard.exe`（依赖本机 .NET 8 Desktop Runtime）
 - 守护服务（可选）：`publish\service\FileGuard.Service.exe`
 - 桌面快捷方式：`文件卫士.lnk`
