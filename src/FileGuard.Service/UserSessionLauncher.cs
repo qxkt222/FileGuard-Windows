@@ -17,6 +17,9 @@ public sealed class UserSessionLauncher : IAppLauncher
 {
     private const string DefaultDesktop = @"winsta0\default";
 
+    /// <summary>拉起后等这么久，确认进程没有立即退出。会阻塞守护循环这么久，可接受。</summary>
+    private const uint LaunchLivenessTimeoutMilliseconds = 1500;
+
     private readonly IAppPathProvider _appPathProvider;
     private readonly IServiceLog _log;
 
@@ -125,17 +128,47 @@ public sealed class UserSessionLauncher : IAppLauncher
 
                 try
                 {
-                    _log.Info(
-                        $"已拉起主程序 pid={processInfo.dwProcessId} session={sessionId} path={exePath}");
-                }
-                catch (Exception)
-                {
-                    // 日志失败不影响拉起结果。
-                }
+                    // 只凭 CreateProcessAsUser 返回 true 不够：主程序若启动即崩（缺依赖、配置损坏等），
+                    // 守护循环下一 tick 又会拉起，形成每 2 秒一次的弹窗循环——
+                    // GuardianWorker 的 30 秒退避只对「调用失败」生效。
+                    // 等 1.5 秒确认它没有立即退出；仍在运行才报成功。
+                    var wait = NativeMethods.WaitForSingleObject(
+                        processInfo.hProcess,
+                        LaunchLivenessTimeoutMilliseconds);
 
-                CloseQuietly(processInfo.hProcess);
-                CloseQuietly(processInfo.hThread);
-                return LaunchResult.Ok();
+                    if (wait == NativeMethods.WaitObject0)
+                    {
+                        var exitCode = 0u;
+                        _ = NativeMethods.GetExitCodeProcess(processInfo.hProcess, out exitCode);
+                        return LaunchResult.Fail($"主程序启动后立即退出（退出码 {exitCode}）");
+                    }
+
+                    // 只认「超时=还活着」。WAIT_FAILED(0xFFFFFFFF) 等异常结果不能当成功，
+                    // 否则「启动即崩」的保护会静默失效。
+                    if (wait != NativeMethods.WaitTimeout)
+                    {
+                        return LaunchResult.Fail(
+                            $"WaitForSingleObject 返回 0x{wait:X8}，无法确认主程序存活");
+                    }
+
+                    try
+                    {
+                        _log.Info(
+                            $"已拉起主程序 pid={processInfo.dwProcessId} session={sessionId} path={exePath}");
+                    }
+                    catch (Exception)
+                    {
+                        // 日志失败不影响拉起结果。
+                    }
+
+                    return LaunchResult.Ok();
+                }
+                finally
+                {
+                    // 成功、失败、异常三条路径都走这里，句柄不会泄漏。
+                    CloseQuietly(processInfo.hProcess);
+                    CloseQuietly(processInfo.hThread);
+                }
             }
             finally
             {

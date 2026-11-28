@@ -184,7 +184,6 @@ public partial class HomeView : UserControl
         var parts = new List<string>();
         if (e.WatchWrite) parts.Add("写入/修改");
         if (e.WatchCreate) parts.Add("新建文件");
-        if (e.WatchDelete) parts.Add("删除");
         if (e.WatchRename) parts.Add("重命名");
         return parts.Count == 0 ? "无" : string.Join("、", parts);
     }
@@ -239,6 +238,14 @@ public partial class HomeView : UserControl
 
     private void OnEnter(GuardEntry entry)
     {
+        // 非管理员限制生效时，改上限/模式等于变相停掉保护。
+        if (App.IsProtectionLocked)
+        {
+            MessageBox.Show("非管理员账户不能修改监视条目。", "文件卫士",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
         // 虚拟盘整个目录被接管，没有豁免概念，直接进设置。
         if (entry.Mode == GuardMode.VirtualDisk)
         {
@@ -277,6 +284,14 @@ public partial class HomeView : UserControl
 
     private void OnToggle(GuardEntry entry)
     {
+        // 停用条目等于停止这条保护；启用不受限制。
+        if (entry.Enabled && App.IsProtectionLocked)
+        {
+            MessageBox.Show("非管理员账户不能停用监视条目。", "文件卫士",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
         entry.Enabled = !entry.Enabled;
         AppState.Current.SaveAndApply();
         Reload();
@@ -284,6 +299,13 @@ public partial class HomeView : UserControl
 
     private void OnDelete(GuardEntry entry)
     {
+        if (App.IsProtectionLocked)
+        {
+            MessageBox.Show("非管理员账户不能删除监视条目。", "文件卫士",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
         var result = MessageBox.Show($"删除条目「{entry.RootPath}」？\n不会删除目录里的文件。",
             "删除条目", MessageBoxButton.YesNo, MessageBoxImage.Warning);
         if (result != MessageBoxResult.Yes) return;
@@ -292,6 +314,7 @@ public partial class HomeView : UserControl
         Reload();
     }
 
+    // 新建条目只会增加保护范围，不移除已有条目的保护，因此不受非管理员限制。
     private void OnCreate(object sender, RoutedEventArgs e) => _host.ShowEntryFlow();
 
     private void OnRecent(object sender, RoutedEventArgs e)

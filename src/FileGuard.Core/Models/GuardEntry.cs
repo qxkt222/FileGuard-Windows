@@ -26,7 +26,6 @@ public sealed class GuardEntry
 
     public bool WatchWrite { get; set; } = true;
     public bool WatchCreate { get; set; }
-    public bool WatchDelete { get; set; }
     public bool WatchRename { get; set; }
 
     /// <summary>
@@ -47,7 +46,6 @@ public sealed class GuardEntry
         MaxBytes = MaxBytes,
         WatchWrite = WatchWrite,
         WatchCreate = WatchCreate,
-        WatchDelete = WatchDelete,
         WatchRename = WatchRename,
         CheckExistingFiles = CheckExistingFiles,
         ExemptPaths = new List<string>(ExemptPaths),

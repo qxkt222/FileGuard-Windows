@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>FileGuard.SelfCheck</RootNamespace>
+    <AssemblyName>FileGuard.SelfCheck</AssemblyName>
+    <!-- 自检要能直接调 Core / Service 的公开方法。 -->
+    <InvariantGlobalization>false</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\FileGuard.Core\FileGuard.Core.csproj" />
+    <ProjectReference Include="..\..\src\FileGuard.Service\FileGuard.Service.csproj" />
+  </ItemGroup>
+
+</Project>

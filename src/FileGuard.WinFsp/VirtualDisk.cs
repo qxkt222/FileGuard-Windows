@@ -152,8 +152,9 @@ namespace FileGuard.WinFsp
                     }
                     catch (Exception ex)
                     {
-                        Debug.WriteLine(
-                            $"[FileGuard.WinFsp] rollback failed; backing store kept at '{store}': {ex.Message}");
+                        // 回滚失败用户会看到目录消失/停在半截，必须留下可查的记录。
+                        DiskLog.Error(
+                            $"挂载失败回滚未完成，backing store 保留在 '{store}'，原路径 '{full}' 未恢复", ex);
                     }
                     throw;
                 }

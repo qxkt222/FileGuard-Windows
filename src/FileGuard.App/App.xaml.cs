@@ -4,6 +4,7 @@ using System.Windows;
 using FileGuard.App.Services;
 using FileGuard.Core.Control;
 using FileGuard.Core.Models;
+using FileGuard.Core.Storage;
 using FileGuard.Core.VirtualDisks;
 
 namespace FileGuard.App;
@@ -18,6 +19,15 @@ public partial class App : Application
     private MainWindow? _main;
 
     public static bool IsAdministrator { get; private set; }
+
+    /// <summary>
+    /// 非管理员限制生效中。开启后非管理员不能暂停保护、停用/删除/修改条目，
+    /// 也不能在设置里关掉这个限制。
+    /// 守护服务安装时会把开关写进 HKLM；那里开着的话，改 config.json 也解不开。
+    /// </summary>
+    public static bool IsProtectionLocked =>
+        (AppState.Current.Options.NonAdminLock || LockSettings.IsLockedByMachine())
+        && !IsAdministrator;
 
     /// <summary>守护服务当前是否在运行。启动时的后台查询和设置页的刷新都会更新它。</summary>
     public static bool GuardServiceRunning { get; private set; }
@@ -273,15 +283,18 @@ public partial class App : Application
 
         if (state.Runtime.IsRunning)
         {
+            // 暂停是一条「停止保护」的路径，要拦；恢复保护永远允许。
+            if (IsProtectionLocked)
+            {
+                MessageBox.Show("非管理员账户不能暂停保护。", "文件卫士",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
             state.PauseAll();
         }
         else
         {
-            if (state.Options.NonAdminLock && !IsAdministrator)
-            {
-                MessageBox.Show("非管理员账户不能恢复保护。", "文件卫士", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
             state.ResumeAll();
         }
 
@@ -319,37 +332,33 @@ public partial class App : Application
         }
     }
 
-    /// <summary>守护服务在运行：先请服务批准，再决定是否退出。</summary>
+    /// <summary>守护服务在运行：用户确认后申请批准，再退出。</summary>
     private void RequestGuardedExit()
     {
+        // 先问用户、再申请批准。批准会一直保留到 hello 或超过兜底宽限期：
+        // 若在确认框还开着时就申请，用户犹豫期间程序崩溃/被杀，服务会认为
+        // 「已批准退出 + 主程序不在」，此后永不拉起，守护等于被永久关掉。
+        var result = MessageBox.Show(
+            "确定退出？退出后守护服务也会放行，不会自动重启。",
+            "文件卫士", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+        if (result != MessageBoxResult.Yes) return;
+
         var reply = GuardServiceClient.Current.RequestExit();
 
         switch (reply?.Type)
         {
             case GuardMessageTypes.ExitApproved:
-                var result = MessageBox.Show(
-                    "确定退出？退出后守护服务也会放行，不会自动重启。",
-                    "文件卫士", MessageBoxButton.YesNo, MessageBoxImage.Question);
-
-                if (result == MessageBoxResult.Yes)
-                {
-                    // 服务每 2 秒巡检一次：只要主程序还在运行，它就会把「已批准退出」清掉。
-                    // 确认框停留超过 2 秒时批准状态早已失效，直接关掉会在下一轮巡检被重新拉起。
-                    // 关闭前再申请一次批准（毫秒级窗口），确保退出后服务确实放行。
-                    GuardServiceClient.Current.RequestExit();
-                    Shutdown();
-                    return;
-                }
-
-                // 用户取消退出：服务此刻处于「已批准退出」状态，如果不补发 hello，
-                // 服务会一直以为用户已退出，之后不再拉起主程序。这里必须把状态清掉。
-                _ = GuardServiceClient.Current.SendHelloAsync(Environment.ProcessId);
+                // 批准后立即关闭，把「已批准但还活着」的窗口压到最小。
+                Shutdown();
                 return;
 
             case GuardMessageTypes.ExitDenied:
                 MessageBox.Show(
                     "非管理员账户不能退出文件卫士。\n\n如果你确实是管理员，请关闭本程序，右键以管理员身份重新启动后再退出。",
                     "文件卫士", MessageBoxButton.OK, MessageBoxImage.Warning);
+                // 服务可能已进入「已批准」状态，补发 hello 让守护恢复正常。
+                _ = GuardServiceClient.Current.SendHelloAsync(Environment.ProcessId);
                 return;
 
             default:

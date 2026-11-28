@@ -105,6 +105,46 @@ namespace FileGuard.WinFsp.Tests
         }
 
         [Fact]
+        public void Mount_ReadOnlyFile_CanBeRead()
+        {
+            string root = NewRoot();
+            string real = NewProject(root);
+            string seedPath = Path.Combine(real, "readonly.txt");
+            const string content = "read-only-through-mount";
+            File.WriteAllText(seedPath, content);
+            File.SetAttributes(seedPath, FileAttributes.ReadOnly);
+
+            VirtualDisk? disk = null;
+            try
+            {
+                disk = VirtualDisk.Mount(real, Limit);
+
+                // A read-only backing file must still be readable through the mount.
+                Assert.True(File.Exists(seedPath));
+                Assert.Equal(content, File.ReadAllText(seedPath));
+                Assert.Equal(FileAttributes.ReadOnly,
+                    File.GetAttributes(seedPath) & FileAttributes.ReadOnly);
+            }
+            finally
+            {
+                try { disk?.Unmount(); }
+                finally
+                {
+                    try
+                    {
+                        if (File.Exists(seedPath))
+                            File.SetAttributes(seedPath, FileAttributes.Normal);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine("[test] restore attributes failed: " + ex.Message);
+                    }
+                    Cleanup(root);
+                }
+            }
+        }
+
+        [Fact]
         public void Mount_WriteOverLimit_FailsWithDiskFull_AndFileIsRemoved()
         {
             string root = NewRoot();

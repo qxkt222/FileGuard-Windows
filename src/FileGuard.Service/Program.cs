@@ -69,7 +69,8 @@ internal static class Program
                     services.AddSingleton<IServiceLog>(log);
                     services.AddSingleton<GuardianState>();
                     services.AddSingleton<IAppPathProvider, RegistryAppPathProvider>();
-                    services.AddSingleton<IAppProcessProbe, AppProcessProbe>();
+                    services.AddSingleton<IAppProcessProbe>(
+                        sp => new AppProcessProbe(sp.GetRequiredService<IAppPathProvider>()));
                     services.AddSingleton<IAppLauncher, UserSessionLauncher>();
                     services.AddSingleton<IClientAdminChecker>(_ => new ClientAdminChecker(log));
                     services.AddSingleton<ControlMessageHandler>();

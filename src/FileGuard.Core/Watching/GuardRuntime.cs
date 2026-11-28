@@ -132,6 +132,8 @@ public sealed class GuardRuntime : IDisposable
     {
         try
         {
+            // 暂停后 watcher 已释放，但后台扫描/在途事件可能还在回调：停了就不再处理。
+            if (!IsRunning) return;
             if (!entry.Enabled) return;
             if (entry.Mode != GuardMode.Watch) return;
 
@@ -162,12 +164,22 @@ public sealed class GuardRuntime : IDisposable
         {
             var ct = _cts.Token;
 
+            // 事件到处理之间文件可能被截断/替换：复核一次，别误删已经合规的文件。
+            if (!IsStillOversized(file.FullPath, entry.MaxBytes)) return;
+
             if (_options.EnableQuarantine)
             {
                 try
                 {
-                    await Task.Run(() => _quarantine.Backup(file.FullPath, entry.Id, entry.RootPath), ct)
+                    var backup = await Task.Run(
+                            () => _quarantine.Backup(file.FullPath, entry.Id, entry.RootPath), ct)
                         .ConfigureAwait(false);
+                    if (backup is null)
+                    {
+                        // 备份是尽力而为，删除是保护本身；失败要留痕，别静默。
+                        AppLog.Error($"隔离区备份失败，仍按保护规则删除：{file.FullPath}");
+                    }
+
                     _quarantine.Prune(_options.QuarantineKeep);
                 }
                 catch (OperationCanceledException) { return; }
@@ -182,6 +194,20 @@ public sealed class GuardRuntime : IDisposable
         finally
         {
             _inflight.TryRemove(file.FullPath, out _);
+        }
+    }
+
+    private static bool IsStillOversized(string path, long maxBytes)
+    {
+        try
+        {
+            var info = new FileInfo(path);
+            return info.Exists && info.Length > maxBytes;
+        }
+        catch (Exception)
+        {
+            // 读不到大小就按原判断继续，保护优先。
+            return true;
         }
     }
 

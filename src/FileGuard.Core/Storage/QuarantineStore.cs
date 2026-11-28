@@ -56,7 +56,8 @@ public sealed class QuarantineStore
                 .OrderByDescending(d => d.Name, StringComparer.Ordinal)
                 .ToList();
 
-            foreach (var old in batches.Skip(Math.Max(0, keep)))
+            // 至少保留最新一批：keep=0 时也不能把刚备份出来的文件一起删掉。
+            foreach (var old in batches.Skip(Math.Max(1, keep)))
             {
                 try { old.Delete(recursive: true); }
                 catch (Exception) { /* 被占用就下轮再删 */ }

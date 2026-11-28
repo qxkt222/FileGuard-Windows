@@ -119,6 +119,25 @@ public sealed class GuardRuntimeTests : IDisposable
     }
 
     [Fact]
+    public async Task CheckExistingFiles_DeletesOversizedPreexistingFile()
+    {
+        var path = Path.Combine(_watch, "preexisting-big.cs");
+        await File.WriteAllBytesAsync(path, new byte[4096]);
+
+        var entry = Entry(maxBytes: 1024, checkExisting: true);
+        _runtime.Apply(new[] { entry });
+        _runtime.Start();
+
+        var gone = await WaitUntilAsync(() => !File.Exists(path), 2000);
+        Assert.True(gone, "开启 CheckExistingFiles 后，启动前已超限的文件应当被删除");
+
+        var recorded = await WaitUntilAsync(
+            () => _log.Recent.Any(r => r.Path == path && r.Action == InterceptAction.Deleted),
+            2000);
+        Assert.True(recorded, "应当产生一条 Deleted 记录");
+    }
+
+    [Fact]
     public async Task ExemptDirectory_IsIgnored()
     {
         var exempt = Path.Combine(_watch, "keep");

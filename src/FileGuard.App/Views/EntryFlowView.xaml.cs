@@ -222,7 +222,6 @@ public partial class EntryFlowView : UserControl
             MaxKbBox.Text = (_draft.MaxBytes / 1024.0).ToString("0.#", CultureInfo.InvariantCulture);
             WriteBox.IsChecked = _draft.WatchWrite;
             CreateBox.IsChecked = _draft.WatchCreate;
-            DeleteBox.IsChecked = _draft.WatchDelete;
             RenameBox.IsChecked = _draft.WatchRename;
             ExistingBox.IsChecked = _draft.CheckExistingFiles;
             RuleFileBox.IsChecked = AppState.Current.Options.WriteRuleFile;
@@ -251,7 +250,6 @@ public partial class EntryFlowView : UserControl
         _draft.LimitEnabled = LimitBox.IsChecked == true;
         _draft.WatchWrite = WriteBox.IsChecked == true;
         _draft.WatchCreate = CreateBox.IsChecked == true;
-        _draft.WatchDelete = DeleteBox.IsChecked == true;
         _draft.WatchRename = RenameBox.IsChecked == true;
         _draft.CheckExistingFiles = ExistingBox.IsChecked == true;
     }
@@ -402,7 +400,11 @@ public partial class EntryFlowView : UserControl
             RuleFileBox.IsChecked == true &&
             Directory.Exists(_draft.RootPath))
         {
-            try { RuleFileWriter.Write(_draft.RootPath, _draft, state.Options.QuarantineKeep); }
+            try
+            {
+                RuleFileWriter.Write(
+                    _draft.RootPath, _draft, state.Options.QuarantineKeep, state.Options.RuleFileName);
+            }
             catch (Exception) { /* 写规则文件失败不影响条目 */ }
         }
 

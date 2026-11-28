@@ -44,6 +44,12 @@ jobs:
           --logger "trx;LogFileName=results.trx"
           --results-directory "$env:RUNNER_TEMP\TestResults"
 
+      # 功能自检：逐项验证 README 声称的能力，FAIL 时退出码非 0。
+      # 发布产物检查在 CI 里自动跳过（没有 publish/dist）。
+      - name: Self-check
+        shell: pwsh
+        run: dotnet run --project tools/FileGuard.SelfCheck -c Release --no-build
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v7

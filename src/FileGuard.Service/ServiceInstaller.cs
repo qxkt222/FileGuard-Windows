@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Security.Principal;
 using FileGuard.Core.Control;
+using FileGuard.Core.Storage;
 
 namespace FileGuard.Service;
 
@@ -122,6 +123,27 @@ internal static class ServiceInstaller
             return ExitCodeFailure;
         }
 
+        // 装了守护服务，才有能力把「非管理员限制」钉在 HKLM：
+        // 之后普通用户改 ProgramData 下的 config.json 也解不开。
+        try
+        {
+            var locked = new ConfigStore(GuardPaths.ConfigFile).Load().Options.NonAdminLock;
+            if (locked && LockSettings.TrySetMachineLock(true))
+            {
+                Console.WriteLine(
+                    $@"已写入 HKLM\{LockSettings.RegistryKeyPath}\{LockSettings.ValueName} = 1");
+            }
+            else if (locked)
+            {
+                Console.Error.WriteLine(
+                    "警告：无法写入 NonAdminLock 注册表项，非管理员限制只保存在用户配置里。");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"警告：读取配置失败，未设置 NonAdminLock：{ex.Message}");
+        }
+
         Console.WriteLine("启动服务…");
         var start = RunSc("start", GuardProtocol.ServiceName);
         PrintScOutput(start);
@@ -185,6 +207,12 @@ internal static class ServiceInstaller
         {
             Console.Error.WriteLine($"错误：删除注册表值失败：{ex.Message}");
             return ExitCodeFailure;
+        }
+
+        // 服务没了，机器级的锁也没有执行者，一并清掉。
+        if (LockSettings.TrySetMachineLock(false))
+        {
+            Console.WriteLine($@"已清除 HKLM\{LockSettings.RegistryKeyPath}\{LockSettings.ValueName}");
         }
 
         Console.WriteLine("卸载完成。");

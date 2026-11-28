@@ -17,6 +17,7 @@ public sealed class FolderWatcher : IDisposable
     private readonly Action<CandidateFile> _onCandidate;
     private readonly Dictionary<string, long> _lastSeenTicks = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _baselineFiles = new(StringComparer.OrdinalIgnoreCase);
+    private bool _baselineCaptured;
     private readonly object _gate = new();
     private FileSystemWatcher? _fsw;
     private bool _disposed;
@@ -56,6 +57,10 @@ public sealed class FolderWatcher : IDisposable
 
         fsw.EnableRaisingEvents = true;
         _fsw = fsw;
+
+        // 先让 watcher 上线、再扫存量：扫描可能持续数秒，这期间的新建/修改不能丢。
+        // 扫描放后台：Start 常由 UI 线程调用，整树枚举不能卡界面，也不能长时间占着运行时锁。
+        if (_entry.CheckExistingFiles) _ = Task.Run(ScanExistingFiles);
     }
 
     public void Stop()
@@ -87,7 +92,8 @@ public sealed class FolderWatcher : IDisposable
     {
         WatchChangeKind.Created => _entry.WatchCreate,
         WatchChangeKind.Changed => _entry.WatchWrite,
-        WatchChangeKind.Deleted => _entry.WatchDelete,
+        // 删除事件暂不支持：文件夹监视无法可靠区分删除与移出目录，先永远关闭。
+        WatchChangeKind.Deleted => false,
         WatchChangeKind.Renamed => _entry.WatchRename,
         _ => false,
     };
@@ -136,6 +142,11 @@ public sealed class FolderWatcher : IDisposable
     /// <summary>启动时把已存在的文件记进基线，之后没在基线里的才算「新建」。</summary>
     private void CaptureBaseline()
     {
+        // 缓冲区溢出后的 Restart 会再次 Start；基线必须沿用首次快照，
+        // 否则溢出窗口里新建的文件会被当成「已存在」，默认规则下永久漏拦。
+        if (_baselineCaptured) return;
+        _baselineCaptured = true;
+
         _baselineFiles.Clear();
         try
         {
@@ -147,6 +158,56 @@ public sealed class FolderWatcher : IDisposable
         catch (Exception)
         {
             // 枚举失败就退化为「全部视为新建」，宁可多检查也不漏拦。
+        }
+    }
+
+    /// <summary>
+    /// 开启「已存在的文件也检查」时，把启动前就已超限的文本文件也交给运行时。
+    /// 复用同一套忽略/豁免/文本文件过滤与去抖，避免和随后的事件重复报警。
+    /// 单个文件或整轮枚举失败都不阻断启动。
+    /// </summary>
+    private void ScanExistingFiles()
+    {
+        // 无权限的子目录直接跳过；不跟随重解析点，避免 junction/符号链接成环。
+        var options = new EnumerationOptions
+        {
+            RecurseSubdirectories = true,
+            IgnoreInaccessible = true,
+            AttributesToSkip = FileAttributes.ReparsePoint,
+        };
+
+        try
+        {
+            foreach (var path in Directory.EnumerateFiles(_entry.RootPath, "*", options))
+            {
+                // watcher 已被 Stop/替换：停止扫描，别把结果交给失效的运行时。
+                if (_disposed || _fsw is null) return;
+
+                try
+                {
+                    if (_rules.IsIgnoredPath(path, _entry.RootPath)) continue;
+                    if (IsExempt(path)) continue;
+                    if (!_rules.IsTextFile(path)) continue;
+
+                    var info = new FileInfo(path);
+                    if (!info.Exists) continue;
+                    if (info.Length <= _entry.MaxBytes) continue;
+
+                    // 与实时事件共用去抖窗口，防止紧接着的 Changed 重复上报。
+                    if (IsDebounced(path)) continue;
+
+                    _onCandidate(new CandidateFile(
+                        path, info.Length, IsNew: false, WatchChangeKind.Changed));
+                }
+                catch (Exception)
+                {
+                    // 单个文件不可读（权限/占用）不影响其余文件。
+                }
+            }
+        }
+        catch (Exception)
+        {
+            // 枚举失败就只依赖实时事件，不影响 watcher 启动。
         }
     }
 

@@ -38,7 +38,8 @@ public partial class SettingsView : UserControl
 
         AutoStartBox.IsChecked = AutoStart.IsEnabled();
         StartMinBox.IsChecked = o.StartMinimized;
-        NonAdminBox.IsChecked = o.NonAdminLock;
+        // 显示生效状态：HKLM 强制锁定时，配置文件里写 false 也不显示成关闭。
+        NonAdminBox.IsChecked = o.NonAdminLock || LockSettings.IsLockedByMachine();
 
         QuarantineBox.IsChecked = o.EnableQuarantine;
         QuarantineKeepBox.Text = o.QuarantineKeep.ToString(CultureInfo.InvariantCulture);
@@ -62,7 +63,29 @@ public partial class SettingsView : UserControl
         o.DefaultCheckExistingFiles = DefaultExistingBox.IsChecked == true;
         o.DefaultMode = DefaultModeDiskRadio.IsChecked == true ? GuardMode.VirtualDisk : GuardMode.Watch;
         o.StartMinimized = StartMinBox.IsChecked == true;
-        o.NonAdminLock = NonAdminBox.IsChecked == true;
+
+        var wantLock = NonAdminBox.IsChecked == true;
+
+        // HKLM 里的锁必须由管理员清掉；普通用户连提权的机会都不给。
+        if (!wantLock && LockSettings.IsLockedByMachine()
+            && (!App.IsAdministrator || !LockSettings.TrySetMachineLock(false)))
+        {
+            wantLock = true;
+            MessageBox.Show(
+                "「非管理员限制」由守护服务锁定，需要以管理员身份运行才能关闭。",
+                "文件卫士", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+
+        // 非管理员不能自己摘掉这把锁。
+        if (!wantLock && App.IsProtectionLocked)
+        {
+            wantLock = true;
+            MessageBox.Show("非管理员账户不能关闭「非管理员限制」，该项保持开启。", "文件卫士",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+
+        NonAdminBox.IsChecked = wantLock;
+        o.NonAdminLock = wantLock;
         o.EnableQuarantine = QuarantineBox.IsChecked == true;
         o.WriteRuleFile = RuleFileBox.IsChecked == true;
 

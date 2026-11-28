@@ -48,6 +48,32 @@ public sealed class ConfigStoreTests
     }
 
     [Fact]
+    public void CorruptConfig_IsPreservedBeforeOverwrite()
+    {
+        var path = NewPath();
+        try
+        {
+            // 读不动的配置：回退默认值可以，但不能让后续 Save 把原文件悄悄覆盖掉。
+            File.WriteAllText(path, "{ this is not json");
+
+            var store = new ConfigStore(path);
+            var config = store.Load();
+
+            Assert.Empty(config.Entries);
+            Assert.True(File.Exists(path + ".bad"), "损坏的配置应当留一份 .bad 副本");
+            Assert.Equal("{ this is not json", File.ReadAllText(path + ".bad"));
+
+            // 即便 Load 时复制失败，Save 前还会再试一次；这里验证正常路径下副本仍在。
+            store.Save(config);
+            Assert.True(File.Exists(path + ".bad"));
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(path)!, recursive: true);
+        }
+    }
+
+    [Fact]
     public void Mode_RoundTripsAsReadableString()
     {
         var path = NewPath();

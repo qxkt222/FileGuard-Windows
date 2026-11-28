@@ -92,7 +92,6 @@
                         <StackPanel Margin="0,0,0,16">
                             <CheckBox x:Name="WriteBox" Content="写入 / 修改（默认）" Margin="0,0,0,6"/>
                             <CheckBox x:Name="CreateBox" Content="新建文件" Margin="0,0,0,6"/>
-                            <CheckBox x:Name="DeleteBox" Content="删除文件" Margin="0,0,0,6"/>
                             <CheckBox x:Name="RenameBox" Content="重命名 / 移动" Margin="0,0,0,6"/>
                         </StackPanel>
 

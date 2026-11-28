@@ -164,6 +164,55 @@ public class GuardianWorkerTests
     }
 
     [Fact]
+    public void ConsecutiveImmediateExitFailures_DoNotRelaunchInsideBackoff()
+    {
+        _probe.Pid = null;
+
+        // 模拟主程序每次拉起后立即退出：launcher 每次都返回 Fail。
+        for (var i = 0; i < 5; i++)
+        {
+            _launcher.Enqueue(LaunchResult.Fail("主程序启动后立即退出（退出码 1）"));
+        }
+
+        var worker = CreateWorker();
+
+        worker.Tick();
+        Assert.Equal(1, _launcher.Calls);
+
+        // 退避期内每 2 秒巡检一次，都不能再次拉起，否则就是每 2 秒弹一次窗。
+        for (var i = 0; i < 14; i++) // 28 秒，仍在 30 秒退避窗口内
+        {
+            _now += Poll;
+            worker.Tick();
+        }
+
+        Assert.Equal(1, _launcher.Calls);
+        Assert.Single(_log.Errors);
+
+        // 越过 30 秒退避窗口后才重试。
+        _now += Poll;
+        worker.Tick();
+        Assert.Equal(2, _launcher.Calls);
+    }
+
+    [Fact]
+    public void SuccessFollowedByImmediateDisappearance_RetriesOnNextTick()
+    {
+        // 拉起「成功」但下一轮巡检仍看不到主程序（mock launcher 模拟启动后立刻消失的旧行为）：
+        // 成功不进入退避，下一 tick 立刻重试。
+        _probe.Pid = null;
+        _launcher.Enqueue(LaunchResult.Ok());
+        var worker = CreateWorker();
+
+        worker.Tick();
+        Assert.Equal(1, _launcher.Calls);
+
+        _now += Poll;
+        worker.Tick();
+        Assert.Equal(2, _launcher.Calls);
+    }
+
+    [Fact]
     public void AppDisappearing_ClearsTrackedPid()
     {
         _state.MarkHello(321);

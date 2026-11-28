@@ -12,7 +12,7 @@
   - **虚拟盘模式**：用 WinFsp 把目录挂成虚拟盘，超限写入**当场返回磁盘已满**，文件根本落不了盘
 - 自动识别子文件夹，可多选豁免目录（仅监视模式）；默认只列直接子级，可展开全层级
 - 单文件上限（默认 20 KB），监视模式超限文件立即删除并复制到隔离区；虚拟盘模式直接拒绝写入
-- 可选监视事件：写入/修改（默认）、新建、删除、重命名（仅监视模式）
+- 可选监视事件：写入/修改（默认）、新建、重命名（仅监视模式）
 - 观察模式：不勾「限制」只记录不删（仅监视模式）
 - 默认忽略 `.git`、`node_modules`、`dist`、`bin` 等目录和 `*.lock`、`*.tmp` 等文件；只对文本类扩展名生效，二进制文件不管
 - 默认只拦「条目生效后新建的文件」，可在条目里开启「已存在的文件也检查」
@@ -45,6 +45,17 @@ $dotnet = "$env:LOCALAPPDATA\Microsoft\dotnet\dotnet.exe"
     --self-contained false -p:PublishSingleFile=true `
     -p:IncludeNativeLibrariesForSelfExtract=true -o publish
 ```
+
+## 功能自检
+
+```powershell
+& $dotnet run --project tools/FileGuard.SelfCheck
+```
+
+逐项验证上面「现在能做什么」里的每条能力，直接调用公开 API，不依赖测试夹具。
+输出 PASS / FAIL / SKIP：FAIL 带代码位置，SKIP 写明前置条件（管理员、SYSTEM 服务等）。
+装了 WinFsp 的机器会真挂载一个临时目录验证写入拦截；没装则自动跳过虚拟盘那一组。
+有 FAIL 时退出码为 1，可直接接进 CI。
 
 ## 结构
 
@@ -144,6 +155,7 @@ publish\service\FileGuard.Service.exe --uninstall
 - 守护服务只守护进程，不接管拦截逻辑：主程序被结束后到重新拉起之间有一到两秒的空窗（服务每 2 秒巡检一次），这段时间里监视不生效。
 - 虚拟盘条目在这空窗期目录处于中间状态（挂载点消失、`.__guard_store` 还在），重新拉起后会自动恢复并重新挂载。
 - 未提权的管理员（UAC 过滤后的普通双击启动）在服务眼里是非管理员，退不出去；需要「以管理员身份运行」后再退出。
+- 「非管理员限制」装了守护服务后由 `HKLM\SOFTWARE\FileGuard\NonAdminLock` 强制，改 `config.json` 无效；没装服务时只在界面层拦截，防误操作、不防手动改配置。
 - 服务只拉活动控制台会话（`WTSGetActiveConsoleSessionId`），没有多会话 / RDP 支持。
 - 开机自启写的是当前用户 Run 键；守护服务本身由 SCM 开机启动。
 

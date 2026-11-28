@@ -24,6 +24,41 @@ namespace FileGuard.WinFsp
     {
         private const int ALLOCATION_UNIT = 4096;
 
+        /* Access mask bits used to pick the backing FileStream access mode. */
+        private const UInt32 FILE_READ_DATA = 0x00000001;
+        private const UInt32 FILE_WRITE_DATA = 0x00000002;
+        private const UInt32 FILE_APPEND_DATA = 0x00000004;
+        private const UInt32 FILE_READ_EA = 0x00000008;
+        private const UInt32 FILE_READ_ATTRIBUTES = 0x00000080;
+        private const UInt32 GENERIC_ALL = 0x10000000;
+        private const UInt32 GENERIC_WRITE = 0x40000000;
+        private const UInt32 GENERIC_READ = 0x80000000;
+
+        /// <summary>
+        /// Maps the granted access mask to the backing <see cref="FileAccess"/>.
+        /// Opening every file read-write breaks read-only files, so only ask
+        /// for what the caller actually requested. When the mask carries both
+        /// directions (or neither, e.g. metadata-only access) stay permissive.
+        /// </summary>
+        private static FileAccess MapAccess(UInt32 GrantedAccess)
+        {
+            if (0 != (GrantedAccess & GENERIC_ALL))
+                return FileAccess.ReadWrite;
+
+            Boolean WantRead = 0 != (GrantedAccess &
+                (FILE_READ_DATA | FILE_READ_EA | FILE_READ_ATTRIBUTES | GENERIC_READ));
+            Boolean WantWrite = 0 != (GrantedAccess &
+                (FILE_WRITE_DATA | FILE_APPEND_DATA | GENERIC_WRITE));
+
+            if (WantRead && WantWrite)
+                return FileAccess.ReadWrite;
+            if (WantRead)
+                return FileAccess.Read;
+            if (WantWrite)
+                return FileAccess.Write;
+            return FileAccess.ReadWrite;
+        }
+
         private readonly Int64 _maxFileSize;
         private readonly Action<String, Int64> _onRejected;
         private readonly String _Path;
@@ -476,7 +511,7 @@ namespace FileGuard.WinFsp
                         new FileStream(
                             FileName,
                             FileMode.Open,
-                            FileAccess.ReadWrite,
+                            MapAccess(GrantedAccess),
                             FileShare.Read | FileShare.Write | FileShare.Delete),
                         FileName);
                     TrackOpen(FileDesc);

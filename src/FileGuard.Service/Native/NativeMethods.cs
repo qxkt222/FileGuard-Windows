@@ -29,6 +29,12 @@ internal static class NativeMethods
 
     internal const uint SePrivilegeEnabled = 0x00000002;
 
+    /// <summary>WaitForSingleObject：对象已进入 signaled 状态（进程已退出）。</summary>
+    internal const uint WaitObject0 = 0x00000000;
+
+    /// <summary>WaitForSingleObject：等待超时（进程仍在运行）。</summary>
+    internal const uint WaitTimeout = 0x00000102;
+
     // ---- 会话 ------------------------------------------------------------------
 
     [DllImport("kernel32.dll", SetLastError = true)]
@@ -108,6 +114,38 @@ internal static class NativeMethods
     [DllImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static extern bool CloseHandle(IntPtr handle);
+
+    /// <summary>等进程句柄进入 signaled（退出）状态；返回 <see cref="WaitObject0"/> 或 <see cref="WaitTimeout"/>。</summary>
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern uint WaitForSingleObject(IntPtr hHandle, uint dwMilliseconds);
+
+    /// <summary>按句柄取文件身份（卷序列号 + 文件索引），用于判断两个路径是否同一个文件。</summary>
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct ByHandleFileInformation
+    {
+        internal uint FileAttributes;
+        internal uint CreationTimeLow;
+        internal uint CreationTimeHigh;
+        internal uint LastAccessTimeLow;
+        internal uint LastAccessTimeHigh;
+        internal uint LastWriteTimeLow;
+        internal uint LastWriteTimeHigh;
+        internal uint VolumeSerialNumber;
+        internal uint FileSizeHigh;
+        internal uint FileSizeLow;
+        internal uint NumberOfLinks;
+        internal uint FileIndexHigh;
+        internal uint FileIndexLow;
+    }
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool GetFileInformationByHandle(
+        SafeFileHandle hFile, out ByHandleFileInformation lpFileInformation);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool GetExitCodeProcess(IntPtr hProcess, out uint lpExitCode);
 
     [DllImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]

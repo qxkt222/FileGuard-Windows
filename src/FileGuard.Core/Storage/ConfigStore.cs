@@ -23,6 +23,7 @@ public sealed class ConfigStore
     };
 
     private readonly string _path;
+    private bool _loadFailed;
 
     public ConfigStore(string path) => _path = path;
 
@@ -44,13 +45,19 @@ public sealed class ConfigStore
         }
         catch (Exception)
         {
-            // 配置损坏时回退默认值，不阻塞启动。
+            // 配置损坏/被占用时回退默认值，不阻塞启动。
+            // 但必须留一份现场：否则 App 紧接着的 Save 会用空配置覆盖掉原文件。
+            _loadFailed = true;
+            PreserveUnreadableCopy();
             return new GuardConfig();
         }
     }
 
     public void Save(GuardConfig config)
     {
+        // 读不动的配置在覆盖前再备份一次，防止 Load 时复制失败（文件被占用）后丢数据。
+        if (_loadFailed) PreserveUnreadableCopy();
+
         var dir = System.IO.Path.GetDirectoryName(_path);
         if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
 
@@ -60,6 +67,18 @@ public sealed class ConfigStore
 
         if (File.Exists(_path)) File.Replace(tmp, _path, null);
         else File.Move(tmp, _path);
+    }
+
+    private void PreserveUnreadableCopy()
+    {
+        try
+        {
+            if (File.Exists(_path)) File.Copy(_path, _path + ".bad", overwrite: true);
+        }
+        catch (Exception)
+        {
+            // 复制也失败（文件被锁死）就算了，至少已经尝试过留证。
+        }
     }
 
     /// <summary>一键恢复默认：删掉现有配置，重新落一份默认的。</summary>
